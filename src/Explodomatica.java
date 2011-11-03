@@ -23,7 +23,7 @@ public class Explodomatica {
 
 	private static void usage() {
 		System.err.printf("usage:\n");
-		System.err.printf("explodomatica [options] somefile.wav\n");
+		System.err.printf("Explodomatica [options] somefile.wav\n");
 		System.err.printf("caution: somefile.wav will be overwritten.\n");
 		System.err.printf("options:\n");
 		System.err.printf("  --duration n    Specifies duration of explosion in secs\n");
@@ -186,7 +186,7 @@ public class Explodomatica {
 			Explodomatica.usage();
 		}
 		e.saveFileName = args[args.length - 1];
-		System.out.println("Save filename is " + e.saveFileName);
+		System.out.println("Save filename is \'" + e.saveFileName + "\'");
 	}
 	
 	private static boolean validInt(String str) {

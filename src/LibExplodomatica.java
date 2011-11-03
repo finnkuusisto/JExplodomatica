@@ -22,11 +22,14 @@
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.UnsupportedAudioFileException;
 
 public class LibExplodomatica {
 
@@ -58,7 +61,8 @@ public class LibExplodomatica {
 		File outFile = new File(filename);
 		try {
 			AudioSystem.write(audioStream, AudioFileFormat.Type.WAVE, outFile);
-		} catch (IOException e) {
+		}
+		catch (IOException e) {
 			System.err.println("Cannot open " + filename);
 			e.printStackTrace();
 			return -1;
@@ -363,60 +367,79 @@ public class LibExplodomatica {
 		return pe;
 	}
 
-	public static void readInputFile(String filename,
-			double[] input_data, long input_samples) {
-		//TODO read source sound from file
-		System.err.println("File Reading Not Yet Implemented!");
-		System.exit(1);
-		//		SF_INFO sfi;
-		//		SNDFILE *sf;
-		//		unsigned long long nframes;
-		//		unsigned long long buffersize;
-		//		unsigned long long samples;
-		//
-		//		memset(&sfi, 0, sizeof(sfi));
-		//
-		//		sf = sf_open(filename, SFM_READ, &sfi);
-		//		if (!sf) {
-		//			fprintf(stderr, "explodomatica: Cannot open '%s' for reading: %s\n", 
-		//				filename, sf_strerror(sf));
-		//			exit(1);
-		//		}
-		//
-		//		printf("Input file:%s\n", filename);
-		//		printf("  frames:      %llu\n", sfi.frames);
-		//		printf("  sample rate: %d\n", sfi.samplerate);
-		//		printf("  channels:    %d\n", sfi.channels);
-		//		printf("    format:    %d\n", sfi.format);
-		//		printf("  sections:    %d\n", sfi.sections);
-		//		printf("  seekable:    %d\n", sfi.seekable);
-		//
-		//		samples = sfi.channels * sfi.frames;
-		//		buffersize = (sizeof(*input_data[0]) * samples);
-		//		*input_data = malloc(buffersize);
-		//		memset(*input_data, 0, buffersize); 
-		//
-		//		printf("samples = %llu\n", samples);
-		//		nframes = sf_read_double(sf, *input_data, samples); 
-		//		if (nframes != samples) {
-		//			fprintf(stderr, "explodomatica: Error reading '%s': %s\n", 
-		//				filename, sf_strerror(sf));
-		//			exit(1);
-		//		}
-		//		*input_samples = nframes;
-		//
-		//		sf_close(sf);	
+	public static Sound readInputFile(String filename) {		
+		//desired format:
+		//16-bit, 1 channel, big-endian, signed PCM
+		AudioFormat format = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,
+				LibExplodomatica.SAMPLERATE, 16, 1, 2,
+				LibExplodomatica.SAMPLERATE, true);
+		//get the input file stream
+		File inFile = new File(filename);
+		AudioInputStream input = null;
+		try {
+			input = AudioSystem.getAudioInputStream(inFile);
+		}
+		catch (UnsupportedAudioFileException e) {
+			System.err.println("Unsupported input audio file " + filename);
+			return null;
+		}
+		catch (IOException e) {
+			System.err.println("Cannot open input audio file " + filename);
+			return null;
+		}
+		//see if we can convert it to the version we want
+		if (!AudioSystem.isConversionSupported(format, input.getFormat())) {
+			//with any luck, this will be uncommon
+			System.err.println("Cannot convert input audio format\n" + 
+					input.getFormat().toString());
+			return null;
+		}
+		//convert if we can, and read in the bytes
+		input = AudioSystem.getAudioInputStream(format, input);
+		List<Double> vals = new ArrayList<Double>();
+		byte[] sample = {0, 0};
+		boolean done = false;
+		while (!done) {
+			int numRead = -1;
+			try {
+				numRead = input.read(sample);
+			}
+			catch (IOException e) {
+				System.err.println("Error reading input audio stream");
+			}
+			if (numRead < 2) { //no more samples
+				done = true;
+			}
+			else { //convert the sample
+				short val = (short)(sample[0] << 8);
+				val |= sample[1];
+				double toAdd = (double)val / (double)Short.MAX_VALUE;
+				if (toAdd < -1.0) { //could happen
+					toAdd = -1.0;
+				}
+				if (toAdd > 1.0) { //shouldn't happen
+					toAdd = 1.0;
+				}
+				vals.add(toAdd);
+			}
+		}
+		Sound ret = new Sound();
+		ret.data = new double[vals.size()];
+		ret.nSamples = vals.size();
+		for (int i = 0; i < ret.nSamples; i++) {
+			ret.data[i] = vals.get(i);
+		}
+		return ret;
 	}
 
 	public static Sound explodomatica(ExplosionDef e) {
 		if (e.inputFileName != null && e.inputFileName.length() != 0) {
-			//TODO should be
-			//Sound tmp = readInputFile(e.inputFileName)
-			//e.inputData = tmp.data;
-			//e.inputSamples = tmp.nsamples;
-			//XXX stubbed right now
-			LibExplodomatica.readInputFile(e.inputFileName, e.inputData,
-					e.inputSamples);
+			Sound tmp = LibExplodomatica.readInputFile(e.inputFileName);
+			if (tmp == null) {
+				return null;
+			}
+			e.inputData = tmp.data;
+			e.inputSamples = tmp.nSamples;
 		}
 
 		Sound pe = LibExplodomatica.makePreExplosions(e);

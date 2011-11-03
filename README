@@ -2,3 +2,67 @@ This is jexplodomatica, a Java port of explodomatica.
 
 See http://smcameron.github.com/explodomatica
 
+
+Build Instructions
+------------------
+You will need to have the JDK installed to compile.
+You can get the JDK at http://java.sun.com
+
+Now you really have 2 options to compile: (1)You can compile it manually
+using javac, or (2)you can use Ant if you have it installed.
+
+1) Navigate to the JExplodomatica directory in a terminal and run:
+javac -d ./bin/ ./src/*.java
+
+2) Navigate to the JExplodomatica directory in a terminal and run:
+ant
+
+
+Running JExplodomatica
+----------------------
+At the moment, there is no GUI for JExplodomatica.  After compiling,
+you can run the command-line version of JExplodomatica from a terminal
+by running (from the JExplodomatica directory):
+java -cp ./bin/ Explodomatica [options] somefile.wav
+
+Note that you should replace '[options]' with your choice of options and
+'somefile.wav' with path and file name where you want JExplodomatica to
+write the output sound.  The JExplodomatica usage is listed below for
+convenience.
+
+
+Usage
+-----
+Explodomatica [options] somefile.wav
+caution: somefile.wav will be overwritten.
+options:
+  --duration n    Specifies duration of explosion in secs
+                  Default value is 4.000000 secs
+  --nlayers n     Specifies number of sound layers to use
+                  to build up each explosion.  Default is 4
+  --preexplosions n
+                  Specifies number of 'pre-explostions' to generate
+                  Default is 1
+  --pre-delay n
+                  Specifies approximate length of the 'ka' in 'ka-BOOM!'
+                  (it is somewhat randomized)
+                  Default is 0.250000 secs
+  --pre-lp-factor n
+                  Specifies the impact of the low pass filter used
+                  on the pre-explosion part of the sound.  values
+                  closer to zero lower the cutoff frequency
+                  while values close to one raise it.
+                  Value should be between 0.2 and 0.9.
+                  Default is 0.800000
+  --pre-lp-count n
+                  Specifies the number of times the low pass filter used
+                  on the pre-explosion part of the sound.  values
+                  Default is 1
+  --speedfactor n
+                  Amount to speed up (or slow down) the final
+                  explosion sound. Values greater than 1.0 speed
+                  the sound up, values less than 1.0 slow it down
+                  Default is 0.450000
+  --noreverb      Suppress the 'reverb' effect
+  --input file    Use the given (44100Hz mono) wav file
+                  as input instead of generating white noise for input.
