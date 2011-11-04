@@ -1,14 +1,40 @@
+/* 
+    (C) Copyright 2011, Finn C. Kuusisto
+
+    This file is part of jexplodomatica, a Java port of explodomatica.
+
+    explodomatica is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    explodomatica is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with explodomatica; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+ */
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.io.File;
 
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JProgressBar;
 import javax.swing.JSlider;
 
 public class JExplodomatica implements ActionListener {
 
+	//frame
 	private JFrame frame;
 	//buttons
 	private JButton generate;
@@ -17,6 +43,9 @@ public class JExplodomatica implements ActionListener {
 	private JButton save;
 	private JButton cancel;
 	private JButton quit;
+	//checkboxes
+	private JCheckBox reverb;
+	private JCheckBox useInput;
 	//labels
 	private JLabel durationLbl;
 	private JLabel durationValLbl;
@@ -43,7 +72,14 @@ public class JExplodomatica implements ActionListener {
 	private JSlider speedFactor;
 	private JSlider reverbEarlyRefls;
 	private JSlider reverbLateRefls;
-	//toggles
+	//progress bar
+	private JProgressBar progressBar;
+	//file chooser
+	private JFileChooser fileChooser;
+	
+	//non gui stuff
+	private String inputFileName;
+	private Sound currentSound;
 	
 	//icon, screw storing an actual image
 	private int[] icon = {
@@ -80,59 +116,33 @@ public class JExplodomatica implements ActionListener {
 		0,0,4,3,3,0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,4,4,4,2,0,0,0,0,0,0,0,0,
 		0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,4,4,3,0,0,0,0,0,0,0
 	};
+	private int[] iconColors = {
+			4086527,-661056,-801930,-1142203,-3845852,-9034993
+	};
 	
 	
 	public JExplodomatica() {
 		//init frame
 		this.frame = new JFrame("JExplodomatica");
+		this.frame.setIconImage(this.getIconImage());
 		this.frame.setLocation(100, 100);
 		this.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		//init others
+		this.initButtons();
+		this.initSliders();
+		this.progressBar = new JProgressBar(0,100);
+		this.fileChooser = new JFileChooser();
+		//layout components
+		this.layoutComponents();
+		//finish frame stuff
+		this.frame.pack();
+		this.frame.setResizable(false);
+	}
+	
+	private void layoutComponents() {
+		//layout
 		this.frame.setLayout(new GridLayout(0,3));
-		//init buttons
-		this.generate = new JButton("Generate");
-		this.generate.setActionCommand("generate");
-		this.generate.addActionListener(this);
-		this.input = new JButton("Input");
-		this.input.setActionCommand("input");
-		this.input.addActionListener(this);
-		this.play = new JButton("Play");
-		this.play.setActionCommand("play");
-		this.play.addActionListener(this);
-		this.save = new JButton("Save");
-		this.save.setActionCommand("save");
-		this.save.addActionListener(this);
-		this.cancel = new JButton("Cancel");
-		this.cancel.setActionCommand("cancel");
-		this.cancel.addActionListener(this);
-		this.quit = new JButton("Quit");
-		this.quit.setActionCommand("quit");
-		this.quit.addActionListener(this);
-		//init sliders and labels
-		this.durationLbl = new JLabel("Duration");
-		this.durationValLbl = new JLabel("42");
-		this.duration = new JSlider(0, 10);
-		this.preExplosionsLbl = new JLabel("Pre Explosions");
-		this.preExplosionsValLbl = new JLabel("42");
-		this.preExplosions = new JSlider(0, 10);
-		this.preDelayLbl = new JLabel("Pre Delay");
-		this.preDelayValLbl = new JLabel("42");
-		this.preDelay = new JSlider(0, 10);
-		this.preLPFactorLbl = new JLabel("Pre Low Pass Factor");
-		this.preLPFactorValLbl = new JLabel("42");
-		this.preLPFactor = new JSlider(0, 10);
-		this.preLPCountLbl = new JLabel("Pre Low Pass Count");
-		this.preLPCountValLbl = new JLabel("42");
-		this.preLPCount = new JSlider(0, 10);
-		this.speedFactorLbl = new JLabel("Speed Factor");
-		this.speedFactorValLbl = new JLabel("42");
-		this.speedFactor = new JSlider(0, 10);
-		this.reverbEarlyReflsLbl = new JLabel("Reverb Early Reflections");
-		this.reverbEarlyReflsValLbl = new JLabel("42");
-		this.reverbEarlyRefls = new JSlider(0, 10);
-		this.reverbLateReflsLbl = new JLabel("Reverb Late Reflections");
-		this.reverbLateReflsValLbl = new JLabel("42");
-		this.reverbLateRefls = new JSlider(0, 10);
-		//add components to frame
+		//add sliders and slider labels
 		this.frame.add(this.durationLbl);
 		this.frame.add(this.duration);
 		this.frame.add(this.durationValLbl);
@@ -157,26 +167,110 @@ public class JExplodomatica implements ActionListener {
 		this.frame.add(this.reverbLateReflsLbl);
 		this.frame.add(this.reverbLateRefls);
 		this.frame.add(this.reverbLateReflsValLbl);
+		//add toggles
+		this.frame.add(this.reverb);
+		this.frame.add(this.useInput);
+		//progress bar
+		this.frame.add(this.progressBar);
+		//and regular buttons
 		this.frame.add(this.generate);
 		this.frame.add(this.input);
 		this.frame.add(this.play);
 		this.frame.add(this.save);
 		this.frame.add(this.cancel);
 		this.frame.add(this.quit);
-		//finish frame stuff
-		this.frame.pack();
-		this.frame.setResizable(false);
+	}
+	
+	private void initButtons() {
+		//regular buttons
+		this.generate = new JButton("Generate");
+		this.generate.setActionCommand("generate");
+		this.generate.addActionListener(this);
+		
+		this.input = new JButton("Input");
+		this.input.setActionCommand("input");
+		this.input.addActionListener(this);
+		
+		this.play = new JButton("Play");
+		this.play.setActionCommand("play");
+		this.play.addActionListener(this);
+		this.play.setEnabled(false);
+		
+		this.save = new JButton("Save");
+		this.save.setActionCommand("save");
+		this.save.addActionListener(this);
+		this.save.setEnabled(false);
+		
+		this.cancel = new JButton("Cancel");
+		this.cancel.setActionCommand("cancel");
+		this.cancel.addActionListener(this);
+		this.cancel.setEnabled(false);
+		
+		this.quit = new JButton("Quit");
+		this.quit.setActionCommand("quit");
+		this.quit.addActionListener(this);
+		//and toggles
+		this.reverb = new JCheckBox("Reverb");
+		this.useInput = new JCheckBox("Use Input Sound");
+		this.useInput.setEnabled(false);
+	}
+	
+	private void initSliders() {
+		this.durationLbl = new JLabel("Duration");
+		this.durationValLbl = new JLabel("42");
+		this.duration = new JSlider(0, 1000);
+		
+		this.preExplosionsLbl = new JLabel("Pre Explosions");
+		this.preExplosionsValLbl = new JLabel("42");
+		this.preExplosions = new JSlider(0, 1000);
+		
+		this.preDelayLbl = new JLabel("Pre Delay");
+		this.preDelayValLbl = new JLabel("42");
+		this.preDelay = new JSlider(0, 1000);
+		
+		this.preLPFactorLbl = new JLabel("Pre Low Pass Factor");
+		this.preLPFactorValLbl = new JLabel("42");
+		this.preLPFactor = new JSlider(0, 1000);
+		
+		this.preLPCountLbl = new JLabel("Pre Low Pass Count");
+		this.preLPCountValLbl = new JLabel("42");
+		this.preLPCount = new JSlider(0, 1000);
+		
+		this.speedFactorLbl = new JLabel("Speed Factor");
+		this.speedFactorValLbl = new JLabel("42");
+		this.speedFactor = new JSlider(0, 1000);
+		
+		this.reverbEarlyReflsLbl = new JLabel("Reverb Early Reflections");
+		this.reverbEarlyReflsValLbl = new JLabel("42");
+		this.reverbEarlyRefls = new JSlider(0, 1000);
+		
+		this.reverbLateReflsLbl = new JLabel("Reverb Late Reflections");
+		this.reverbLateReflsValLbl = new JLabel("42");
+		this.reverbLateRefls = new JSlider(0, 1000);
 	}
 	
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		//generate button
 		if (e.getActionCommand().equals("generate")) {
-			System.out.println("clicked generate");
+			//clear the current sound
+			this.play.setEnabled(false);
+			this.save.setEnabled(false);
+			this.currentSound = null;
+			//TODO gather settings
+			//TODO get a thread running the generation
+			//TODO store sound in current sound
+			this.play.setEnabled(true);
+			this.save.setEnabled(true);
 		}
 		//input button
 		if (e.getActionCommand().equals("input")) {
-			System.out.println("clicked input");
+			int result = this.fileChooser.showOpenDialog(this.frame);
+			if (result == JFileChooser.APPROVE_OPTION) {
+				File tmp = this.fileChooser.getSelectedFile();
+				this.inputFileName = tmp.getAbsolutePath();
+				this.useInput.setEnabled(true);
+			}
 		}
 		//play button
 		if (e.getActionCommand().equals("play")) {
@@ -192,8 +286,19 @@ public class JExplodomatica implements ActionListener {
 		}
 		//quit button
 		if (e.getActionCommand().equals("quit")) {
-			System.out.println("clicked quit");
+			this.frame.dispose();
 		}
+	}
+	
+	public BufferedImage getIconImage() {
+		BufferedImage img = new BufferedImage(32, 32,
+				BufferedImage.TYPE_INT_ARGB);
+		for (int i = 0; i < this.icon.length; i++) {
+			int r = i / 32;
+			int c = i % 32;
+			img.setRGB(c, r, this.iconColors[this.icon[i]]);
+		}
+		return img;
 	}
 	
 	public void show() {
