@@ -1,4 +1,4 @@
-This is jexplodomatica, a Java port of explodomatica.
+This is JExplodomatica, a Java port of Explodomatica.
 
 See http://smcameron.github.com/explodomatica
 
@@ -20,9 +20,14 @@ ant
 
 Running JExplodomatica
 ----------------------
-At the moment, there is no GUI for JExplodomatica.  After compiling,
-you can run the command-line version of JExplodomatica from a terminal
-by running (from the JExplodomatica directory):
+The GUI program is named JExplodomatica.  After compiling, you can run
+the GUI version from a terminal by running (from the JExplodomatica
+directory):
+java -cp ./bin/ JExplodomatica
+
+The command-line program is named Explodomatica.  After compiling, you
+can run the command-line version of JExplodomatica from a terminal by
+running (from the JExplodomatica directory):
 java -cp ./bin/ Explodomatica [options] somefile.wav
 
 Note that you should replace '[options]' with your choice of options and
