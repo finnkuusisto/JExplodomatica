@@ -44,7 +44,7 @@ public class Explodomatica {
 		System.err.printf("                  closer to zero lower the cutoff frequency\n");
 		System.err.printf("                  while values close to one raise it.\n");
 		System.err.printf("                  Value should be between 0.2 and 0.9.\n");
-		System.err.printf("                  Default is %f\n", ExplosionDef.explodomaticaDefaults.preExplosionLowPassFactor);
+		System.err.printf("                  Default is %f\n", ExplosionDef.explodomaticaDefaults.preExplosionLPFactor);
 		System.err.printf("  --pre-lp-count n\n");
 		System.err.printf("                  Specifies the number of times the low pass filter used\n");
 		System.err.printf("                  on the pre-explosion part of the sound.  values\n");
@@ -142,7 +142,7 @@ public class Explodomatica {
 					argIndex++;
 					if (argIndex < args.length - 1 &&
 							Explodomatica.validDouble(args[argIndex])) {
-						e.preExplosionLowPassFactor =
+						e.preExplosionLPFactor =
 							Double.parseDouble(args[argIndex]);
 						argIndex++;
 					}
@@ -225,6 +225,7 @@ public class Explodomatica {
 		if (args.length < 1) {
 			Explodomatica.usage();
 		}
+		LibExplodomatica.gui = false;
 		Explodomatica.processOptions(args, e);
 		LibExplodomatica.explodomatica(e);
 	}

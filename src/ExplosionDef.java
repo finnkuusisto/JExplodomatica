@@ -44,7 +44,7 @@ public class ExplosionDef {
 	public ExplosionDef(String saveFileName, String inputFileName,
 			double[] inputData, long inputSamples, double duration,
 			int nLayers, int preExplosions, double preExplosionDelay,
-			double preExplosionLowPassFactor, int preExplosionLPIters,
+			double preExplosionLPFactor, int preExplosionLPIters,
 			double finalSpeedFactor, int reverbEarlyRefls, int reverbLateRefls,
 			boolean reverb) {
 		this.saveFileName = saveFileName;
@@ -55,7 +55,7 @@ public class ExplosionDef {
 		this.nLayers = nLayers;
 		this.preExplosions = preExplosions;
 		this.preExplosionDelay = preExplosionDelay;
-		this.preExplosionLowPassFactor = preExplosionLowPassFactor;
+		this.preExplosionLPFactor = preExplosionLPFactor;
 		this.preExplosionLPIters = preExplosionLPIters;
 		this.finalSpeedFactor = finalSpeedFactor;
 		this.reverbEarlyRefls = reverbEarlyRefls;
@@ -71,7 +71,7 @@ public class ExplosionDef {
 	public int nLayers;
 	public int preExplosions;
 	public double preExplosionDelay;
-	public double preExplosionLowPassFactor;
+	public double preExplosionLPFactor;
 	public int preExplosionLPIters;
 	public double finalSpeedFactor;
 	public int reverbEarlyRefls;

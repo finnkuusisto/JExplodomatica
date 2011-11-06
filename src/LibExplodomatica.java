@@ -34,7 +34,12 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 public class LibExplodomatica {
 
 	public static final int SAMPLERATE = 44100;
+	
+	//these are only used by the GUI
+	//hack... can't have multiple threads running this at the same time
 	public static volatile float explodomaticaProgress = 0.0F;
+	public static volatile boolean gui = false;
+	public static volatile boolean cancel = false;
 
 	public static int secondsToFrames(double seconds) {
 		//this is actually seconds to samples, but they're the same for PCM
@@ -42,6 +47,24 @@ public class LibExplodomatica {
 	}
 
 	public static int explodomaticaSaveFile(String filename, Sound s,
+			int channels) {
+		AudioInputStream audioStream = LibExplodomatica.convertToPCMStream(s,
+				channels);
+		//write the audio stream as a wav
+		File outFile = new File(filename);
+		try {
+			AudioSystem.write(audioStream, AudioFileFormat.Type.WAVE, outFile);
+		}
+		catch (IOException e) {
+			System.err.println("Cannot open " + filename);
+			e.printStackTrace();
+			return -1;
+		}
+		System.out.println("Saved output in \'" + filename + "\'");
+		return 0;
+	}
+	
+	public static AudioInputStream convertToPCMStream(Sound s,
 			int channels) {
 		//convert to bytes for 16-bit signed PCM
 		byte[] bytes = new byte[s.nSamples * 2];
@@ -55,20 +78,7 @@ public class LibExplodomatica {
 		AudioFormat format = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,
 				LibExplodomatica.SAMPLERATE, 16, channels, (2 * channels),
 				LibExplodomatica.SAMPLERATE, true);
-		AudioInputStream audioStream = new AudioInputStream(byteStream, format,
-				s.nSamples);
-		//write the audio stream as a wav
-		File outFile = new File(filename);
-		try {
-			AudioSystem.write(audioStream, AudioFileFormat.Type.WAVE, outFile);
-		}
-		catch (IOException e) {
-			System.err.println("Cannot open " + filename);
-			e.printStackTrace();
-			return -1;
-		}
-		System.out.println("Saved output in \'" + filename + "\'");
-		return 0;
+		return new AudioInputStream(byteStream, format, s.nSamples);
 	}
 
 	public static Sound addSound(Sound s1, Sound s2) {
@@ -96,7 +106,6 @@ public class LibExplodomatica {
 
 	public static void accumulateSound(Sound acc, Sound inc) {
 		Sound t = LibExplodomatica.addSound(acc, inc);
-		//TODO why not just return t
 		acc.data = t.data;
 		acc.nSamples = t.nSamples;
 	}
@@ -160,7 +169,6 @@ public class LibExplodomatica {
 
 	public static void slidingLowPassInPlace(Sound s, double alpha1,
 			double alpha2) {
-		//TODO why not just use slidingLowPass
 		Sound o = slidingLowPass(s, alpha1, alpha2);
 		s.data = o.data;
 		s.nSamples = o.nSamples;
@@ -199,7 +207,6 @@ public class LibExplodomatica {
 	}
 
 	public static void changeSpeedInPlace(Sound s, double factor) {
-		//TODO again, why not just use changeSpeed
 		Sound o = changeSpeed(s, factor);
 		s.data = o.data;
 		s.nSamples = o.nSamples;
@@ -245,7 +252,6 @@ public class LibExplodomatica {
 	}
 
 	public static void updateProgress(float progressInc) {
-		//TODO might not need this with Swing port
 		if (LibExplodomatica.explodomaticaProgress == 0.0F) {
 			return;
 		}
@@ -267,8 +273,18 @@ public class LibExplodomatica {
 		}
 		LibExplodomatica.dot();
 		withVerb.nSamples = s.nSamples * 2;
+		//GUI cancel//
+		if (LibExplodomatica.gui && LibExplodomatica.cancel) { 
+			return null;
+		}
+		//////////////
 		Sound echo = LibExplodomatica.copySound(withVerb);
 		for (int i = 0; i < earlyRefls; i++) {
+			//GUI cancel//
+			if (LibExplodomatica.gui && LibExplodomatica.cancel) {
+				return null;
+			}
+			//////////////
 			LibExplodomatica.dot();
 			Sound echo2 = LibExplodomatica.slidingLowPass(echo, 0.5, 0.5);
 			double gain = (Math.random() * 0.03) + 0.03;
@@ -281,6 +297,11 @@ public class LibExplodomatica {
 			LibExplodomatica.updateProgress(progressInc);
 		}
 		for (int i = 0; i < lateRefls; i++) {
+			//GUI cancel//
+			if (LibExplodomatica.gui && LibExplodomatica.cancel) {
+				return null;
+			}
+			//////////////
 			LibExplodomatica.dot();
 			Sound echo2 = LibExplodomatica.slidingLowPass(echo, 0.5, 0.2);
 			double gain = (Math.random() * 0.01) + 0.03;
@@ -360,8 +381,8 @@ public class LibExplodomatica {
 		}
 		for (int i = 0 ; i < e.preExplosionLPIters; i++) {
 			LibExplodomatica.slidingLowPassInPlace(pe,
-					e.preExplosionLowPassFactor,
-					e.preExplosionLowPassFactor);
+					e.preExplosionLPFactor,
+					e.preExplosionLPFactor);
 		}
 		LibExplodomatica.renormalize(pe);
 		return pe;
@@ -433,6 +454,11 @@ public class LibExplodomatica {
 	}
 
 	public static Sound explodomatica(ExplosionDef e) {
+		//GUI cancel//
+		if (LibExplodomatica.gui && LibExplodomatica.cancel) { 
+			return null;
+		}
+		//////////////
 		if (e.inputFileName != null && e.inputFileName.length() != 0) {
 			Sound tmp = LibExplodomatica.readInputFile(e.inputFileName);
 			if (tmp == null) {
@@ -441,51 +467,91 @@ public class LibExplodomatica {
 			e.inputData = tmp.data;
 			e.inputSamples = tmp.nSamples;
 		}
-
+		if (!e.reverb && LibExplodomatica.gui) {
+			LibExplodomatica.explodomaticaProgress = 0.2F;
+		}
+		
+		//GUI cancel//
+		if (LibExplodomatica.gui && LibExplodomatica.cancel) { 
+			return null;
+		}
+		//////////////
 		Sound pe = LibExplodomatica.makePreExplosions(e);
-		if (!e.reverb && LibExplodomatica.explodomaticaProgress != 0.0F) {
+		if (!e.reverb && LibExplodomatica.gui) {
 			LibExplodomatica.explodomaticaProgress = 0.33F;
 		}
 
+		//GUI cancel//
+		if (LibExplodomatica.gui && LibExplodomatica.cancel) { 
+			return null;
+		}
+		//////////////
 		Sound s = LibExplodomatica.makeExplosion(e, e.duration, e.nLayers);
-		if (!e.reverb && LibExplodomatica.explodomaticaProgress != 0.0F) {
+		if (!e.reverb && LibExplodomatica.gui) {
 			LibExplodomatica.explodomaticaProgress = 0.5F;
 		}
+		
+		//GUI cancel//
+		if (LibExplodomatica.gui && LibExplodomatica.cancel) { 
+			return null;
+		}
+		//////////////
 		if (pe != null) {
 			LibExplodomatica.accumulateSound(s, pe);
 			LibExplodomatica.renormalize(s);
 		}
-		if (!e.reverb && LibExplodomatica.explodomaticaProgress != 0.0F) {
+		if (!e.reverb && LibExplodomatica.gui) {
 			LibExplodomatica.explodomaticaProgress = 0.8F;
 		}
+		
+		//GUI cancel//
+		if (LibExplodomatica.gui && LibExplodomatica.cancel) { 
+			return null;
+		}
+		//////////////
 		LibExplodomatica.changeSpeedInPlace(s, e.finalSpeedFactor);
 		LibExplodomatica.trimTrailingSilence(s);
 		Sound s2 = null;
+		//GUI cancel//
+		if (LibExplodomatica.gui && LibExplodomatica.cancel) { 
+			return null;
+		}
+		//////////////
 		if (e.reverb) {
 			s2 = LibExplodomatica.poorMansReverb(s, e.reverbEarlyRefls,
 					e.reverbLateRefls);
+			//GUI cancel//
+			if (LibExplodomatica.gui && LibExplodomatica.cancel) { 
+				return null;
+			}
+			//////////////
 			LibExplodomatica.trimTrailingSilence(s2);
 		}
 		else {
 			s2 = LibExplodomatica.copySound(s);
-			if (!e.reverb && LibExplodomatica.explodomaticaProgress != 0.0F) {
+			if (!e.reverb && LibExplodomatica.gui) {
 				LibExplodomatica.explodomaticaProgress = 0.9F;
 			}
 		}
 
+		//GUI cancel//
+		if (LibExplodomatica.gui && LibExplodomatica.cancel) { 
+			return null;
+		}
+		//////////////
 		if (e.saveFileName.length() != 0) {
 			LibExplodomatica.explodomaticaSaveFile(e.saveFileName, s2, 1);
 		}
 
-		if (LibExplodomatica.explodomaticaProgress != 0.0F) {
+		if (LibExplodomatica.gui) {
 			LibExplodomatica.explodomaticaProgress = 1.0F;
 		}
+		//GUI cancel//
+		if (LibExplodomatica.gui && LibExplodomatica.cancel) { 
+			return null;
+		}
+		//////////////
 		return s2;
-	}
-
-	public static void explodomaticaProgressVariable(float progress) {
-		//TODO might not need this when porting to Swing
-		LibExplodomatica.explodomaticaProgress = progress;
 	}
 
 }
