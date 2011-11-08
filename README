@@ -12,6 +12,7 @@ Now you really have 2 options to compile: (1)You can compile it manually
 using javac, or (2)you can use Ant if you have it installed.
 
 1) Navigate to the JExplodomatica directory in a terminal and run:
+mkdir bin
 javac -d ./bin/ ./src/*.java
 
 2) Navigate to the JExplodomatica directory in a terminal and run:

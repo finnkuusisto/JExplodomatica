@@ -327,6 +327,7 @@ public class JExplodomatica implements ActionListener, PropertyChangeListener,
 	
 	private void setEnabledAll(boolean enabled) {
 		//sliders
+		this.nLayers.setEnabled(enabled);
 		this.duration.setEnabled(enabled);
 		this.preExplosions.setEnabled(enabled);
 		this.preDelay.setEnabled(enabled);
@@ -414,7 +415,9 @@ public class JExplodomatica implements ActionListener, PropertyChangeListener,
 			}
 			if (this.currentClip != null) {
 				this.currentClip.stop();
-				this.currentClip.close();
+				if (this.currentClip.isOpen()) {
+					this.currentClip.close();
+				}
 			}
 			this.frame.dispose();
 		}
@@ -557,7 +560,9 @@ public class JExplodomatica implements ActionListener, PropertyChangeListener,
 						if (currentClip == null) {
 							currentClip = AudioSystem.getClip();
 						}
-						currentClip.close();
+						if (currentClip.isOpen()) {
+							currentClip.close();
+						}
 						currentClip.open(
 								LibExplodomatica.convertToPCMStream(tmp, 1));
 						play.setEnabled(true);
